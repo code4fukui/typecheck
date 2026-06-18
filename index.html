@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>120文字タイピング計測</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:0 16px;line-height:1.7}
+#text{font-size:20px;background:#f5f5f5;padding:16px;border-radius:12px}
+textarea{width:100%;height:160px;font-size:20px;padding:12px;box-sizing:border-box}
+.ok{color:#0a7}.ng{color:#c33}.stat{font-size:20px;margin:12px 0}
+button{font-size:18px;padding:8px 16px}
+</style>
+</head>
+<body>
+
+<h1>タイピング時間計測</h1>
+
+<p>下の文章をそのまま入力してください。入力を始めると計測開始、全文が一致すると終了します。</p>
+
+<div id="text"></div>
+
+<div class="stat">
+  時間: <span id="time">0.0</span> 秒 /
+  文字数: <span id="count">0</span> /
+  速度: <span id="speed">0.0</span> 文字/分
+</div>
+
+<textarea id="input" placeholder="ここに入力"></textarea>
+<p id="result"></p>
+<button onclick="resetTest()">リセット</button>
+
+<script>
+const target =
+`福井県では多くの人が自然と共に暮らしています。春になると桜が咲き、夏には海や山でさまざまな活動が行われます。学校ではタブレットやパソコンを使った学習も増えています。プログラミングや情報活用能力は、これからの社会で大切な力です。IchigoJamやmicro:bitなどを活用して学ぶ児童もいます。`;
+
+const text = document.getElementById("text");
+const input = document.getElementById("input");
+const timeEl = document.getElementById("time");
+const countEl = document.getElementById("count");
+const speedEl = document.getElementById("speed");
+const result = document.getElementById("result");
+
+let startTime = null;
+let timer = null;
+let finished = false;
+
+text.textContent = target;
+
+function normalize(s) {
+  return s.replace(/\r\n/g, "\n");
+}
+
+function update() {
+  if (!startTime || finished) return;
+  const sec = (Date.now() - startTime) / 1000;
+  const chars = input.value.length;
+  timeEl.textContent = sec.toFixed(1);
+  countEl.textContent = chars;
+  speedEl.textContent = (chars / sec * 60).toFixed(1);
+}
+
+input.addEventListener("input", () => {
+  if (!startTime) {
+    startTime = Date.now();
+    timer = setInterval(update, 100);
+  }
+
+  update();
+
+  const typed = normalize(input.value);
+  const goal = normalize(target);
+
+  if (typed === goal) {
+    finished = true;
+    clearInterval(timer);
+
+    const sec = (Date.now() - startTime) / 1000;
+    const chars = goal.length;
+    const speed = chars / sec * 60;
+
+    result.innerHTML =
+      `<span class="ok">完了！</span><br>` +
+      `所要時間: ${sec.toFixed(1)}秒<br>` +
+      `文字数: ${chars}文字<br>` +
+      `速度: ${speed.toFixed(1)}文字/分`;
+  } else if (!goal.startsWith(typed)) {
+    result.innerHTML = `<span class="ng">入力が見本と違います</span>`;
+  } else {
+    result.textContent = "";
+  }
+});
+
+input.addEventListener("paste", (event) => {
+  event.preventDefault();
+  result.innerHTML = `<span class="ng">ペーストはできません</span>`;
+});
+
+input.addEventListener("beforeinput", (event) => {
+  if (event.inputType === "insertFromPaste") {
+    event.preventDefault();
+    result.innerHTML = `<span class="ng">ペーストはできません</span>`;
+  }
+});
+
+function resetTest() {
+  startTime = null;
+  finished = false;
+  clearInterval(timer);
+  input.value = "";
+  timeEl.textContent = "0.0";
+  countEl.textContent = "0";
+  speedEl.textContent = "0.0";
+  result.textContent = "";
+  input.focus();
+}
+</script>
+
+</body>
+</html>
