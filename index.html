@@ -17,7 +17,7 @@ button{font-size:18px;padding:8px 16px}
 
 <h1>タイピング時間計測</h1>
 
-<p>下の文章をそのまま入力してください。入力を始めると計測開始、全文が一致すると終了します。</p>
+<p>下の文章をそのまま入力してください。入力を始めると計測開始、全文が一致するか1分経過すると終了します。</p>
 
 <div id="text"></div>
 
@@ -41,6 +41,7 @@ const timeEl = document.getElementById("time");
 const countEl = document.getElementById("count");
 const speedEl = document.getElementById("speed");
 const result = document.getElementById("result");
+const timeLimitSec = 60;
 
 let startTime = null;
 let timer = null;
@@ -69,11 +70,37 @@ function renderText(typed) {
 
 function update() {
   if (!startTime || finished) return;
-  const sec = (Date.now() - startTime) / 1000;
+  const sec = Math.min((Date.now() - startTime) / 1000, timeLimitSec);
   const chars = input.value.length;
   timeEl.textContent = sec.toFixed(1);
   countEl.textContent = chars;
   speedEl.textContent = (chars / sec * 60).toFixed(1);
+
+  if (sec >= timeLimitSec) {
+    finishTest(false);
+  }
+}
+
+function finishTest(completed) {
+  finished = true;
+  clearInterval(timer);
+  input.disabled = true;
+
+  const goal = normalize(target);
+  const sec = completed
+    ? (Date.now() - startTime) / 1000
+    : timeLimitSec;
+  const chars = completed ? goal.length : input.value.length;
+  const speed = chars / sec * 60;
+
+  timeEl.textContent = sec.toFixed(1);
+  countEl.textContent = chars;
+  speedEl.textContent = speed.toFixed(1);
+  result.innerHTML =
+    `<span class="${completed ? "ok" : "ng"}">${completed ? "完了！" : "時間切れ"}</span><br>` +
+    `所要時間: ${sec.toFixed(1)}秒<br>` +
+    `文字数: ${chars}文字<br>` +
+    `速度: ${speed.toFixed(1)}文字/分`;
 }
 
 input.addEventListener("input", () => {
@@ -83,24 +110,14 @@ input.addEventListener("input", () => {
   }
 
   update();
+  if (finished) return;
 
   const typed = normalize(input.value);
   const goal = normalize(target);
   renderText(typed);
 
   if (typed === goal) {
-    finished = true;
-    clearInterval(timer);
-
-    const sec = (Date.now() - startTime) / 1000;
-    const chars = goal.length;
-    const speed = chars / sec * 60;
-
-    result.innerHTML =
-      `<span class="ok">完了！</span><br>` +
-      `所要時間: ${sec.toFixed(1)}秒<br>` +
-      `文字数: ${chars}文字<br>` +
-      `速度: ${speed.toFixed(1)}文字/分`;
+    finishTest(true);
   } else if (!goal.startsWith(typed)) {
     result.innerHTML = `<span class="ng">入力が見本と違います</span>`;
   } else {
@@ -125,6 +142,7 @@ function resetTest() {
   finished = false;
   clearInterval(timer);
   input.value = "";
+  input.disabled = false;
   timeEl.textContent = "0.0";
   countEl.textContent = "0";
   speedEl.textContent = "0.0";
